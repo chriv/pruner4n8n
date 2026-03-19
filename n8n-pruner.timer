@@ -1,9 +1,11 @@
 [Unit]
-Description=Run n8n Surgical Pruner Daily
+Description=Run n8n Surgical Pruner Hourly
 
 [Timer]
-OnCalendar=*-*-* 03:00:00
+# Runs at the start of every hour
+OnCalendar=hourly
 Persistent=true
 
 [Install]
 WantedBy=timers.target
+

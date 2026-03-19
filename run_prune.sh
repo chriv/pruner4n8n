@@ -13,11 +13,11 @@ if [ -z "$CONTAINER_ID" ]; then
     exit 1
 fi
 
-echo "Running surgical prune on container: $CONTAINER_ID"
-
-# Execute the SQL. Note the use of -i (interactive) without -t (tty) for piping.
+echo "Step 1: Running surgical row deletion..."
 cat "$DIR/prune.sql" | docker exec -i "$CONTAINER_ID" psql -U n8n
 
-echo "Prune complete."
+echo "Step 2: Reclaiming disk space (VACUUM FULL)..."
+docker exec -i "$CONTAINER_ID" psql -U n8n -c "VACUUM FULL execution_data;"
 
+echo "Maintenance complete: $(date)"
 
