@@ -1,3 +1,7 @@
+![License: Unlicense](https://img.shields.io/badge/license-Unlicense-blue.svg)
+![n8n](https://img.shields.io/badge/n8n-compatible-orange.svg)
+![Postgres](https://img.shields.io/badge/PostgreSQL-15+-blue.svg)
+
 # pruner4n8n: Surgical n8n Database Pruning
 
 A specialized maintenance utility for n8n instances running on Docker (specifically optimized for CapRover/Swarm environments).
