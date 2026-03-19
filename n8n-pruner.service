@@ -1,0 +1,13 @@
+[Unit]
+Description=Surgical Pruner for n8n Database
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/home/chuck/pruner4n8n/run_prune.sh
+User=chuck
+Group=docker
+
+[Install]
+WantedBy=multi-user.target
