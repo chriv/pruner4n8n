@@ -14,7 +14,7 @@ This "Surgical Pruner" applies logic that n8n's native janitor lacks:
 1. **Activity-Based Shielding**: It ignores workflows you have modified recently (default: 7 days), ensuring you have full history while actively developing/debugging.
 2. **Status-Aware Retention**: It keeps a specific number of both `success` AND `failed` executions (default: 10 each) per workflow, so you never lose your "last known good" or "last known error" states.
 3. **Full binaryData Cleanup**: When executions are deleted, their corresponding `binaryData` folders are also removed from the n8n container. Orphaned folders (left behind by prior pruning runs or manual deletions) are swept up as well. If n8n is configured to store binary data in the database (`N8N_DEFAULT_BINARY_DATA_MODE=database`), orphaned rows in the `binary_data` table are cleaned up too.
-4. **Space Reclamation**: It runs `VACUUM FULL` to return disk space to the OS immediately, keeping the filesystem footprint lean on storage-constrained devices like the Raspberry Pi.
+4. **Space Reclamation**: It runs `VACUUM FULL` to return disk space to the OS immediately, keeping the filesystem footprint lean.
 
 ## Configuration
 
