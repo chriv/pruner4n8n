@@ -13,7 +13,8 @@ n8n's global pruning (`N8N_EXECUTIONS_DATA_PRUNE`) is a blunt instrument. It del
 This "Surgical Pruner" applies logic that n8n's native janitor lacks:
 1. **Activity-Based Shielding**: It ignores workflows you have modified recently (default: 7 days), ensuring you have full history while actively developing/debugging.
 2. **Status-Aware Retention**: It keeps a specific number of both `success` AND `failed` executions (default: 10 each) per workflow, so you never lose your "last known good" or "last known error" states.
-3. **Space Reclamation**: It runs a non-blocking `VACUUM` to keep the filesystem footprint lean on storage-constrained devices like the Raspberry Pi.
+3. **Full binaryData Cleanup**: When executions are deleted, their corresponding `binaryData` folders are also removed from the n8n container. Orphaned folders (left behind by prior pruning runs or manual deletions) are swept up as well.
+4. **Space Reclamation**: It runs `VACUUM FULL` to return disk space to the OS immediately, keeping the filesystem footprint lean on storage-constrained devices like the Raspberry Pi.
 
 ## Configuration
 
@@ -31,27 +32,37 @@ The maintenance suite relies on a local `env` file to handle database credential
 
 *Note: The `env` file is ignored by Git to keep your credentials safe.*
 
-## Features (Updated)
+## Features
 
-- **Hourly Execution**: Now runs every hour to keep the database size "pinned" at its minimum.
+- **Hourly Execution**: Runs every hour to keep the database size "pinned" at its minimum.
 - **Surgical Row Deletion**: Keeps exactly 10 `success` and 10 `failed` executions per workflow.
 - **Development Shielding**: Workflows modified within the last 7 days are ignored, preserving full history during active coding sessions.
+- **binaryData Cleanup**: Deletes `binaryData` folders for each pruned execution, and sweeps orphaned folders left by any previous runs.
 - **Aggressive Reclaiming**: Automatically runs `VACUUM FULL` after every prune to return disk space to the OS immediately.
 - **Multi-Core Backups**: Includes a manual backup script that utilizes `lbzip2` for high-speed, parallel compression.
 
 ## Files
-- `prune.sql`: The logic engine. Uses PostgreSQL Window Functions to partition and rank executions.
-- `run_prune.sh`: The execution wrapper. Dynamically finds the active `n8n-db` container and pipes the SQL in.
+- `prune.sql`: The logic engine. Uses PostgreSQL Window Functions to partition and rank executions. Returns deleted rows via `RETURNING` so the shell can clean up corresponding binaryData.
+- `run_prune.sh`: The execution wrapper. Dynamically finds both the `n8n-db` and `n8n` containers, runs the prune, cleans binaryData, sweeps orphans, and vacuums.
 - `setup.sh`: The installer. Sets up the Systemd Service and Timer.
 - `backup_n8n.sh`: A manual backup script. Assumes lbzip2 is installed.
 
+## Prerequisites
+
+The user account that runs the pruner (set in `n8n-pruner.service`) must be able to run `docker` commands without `sudo`. On most systems this means adding the user to the `docker` group:
+```bash
+sudo usermod -aG docker $USER
+```
+A re-login is required for the group change to take effect. The `setup.sh` script sets `Group=docker` in the service unit automatically.
+
 ## Installation
 1. Clone this repo to `~/pruner4n8n/`.
-2. Make the scripts executable:
+2. Ensure your user is in the `docker` group (see Prerequisites above).
+3. Make the scripts executable:
    ```bash
    chmod +x run_prune.sh setup.sh
    ```
-3. Run the setup script:
+4. Run the setup script:
    ```bash
    ./setup.sh
    ```
@@ -88,4 +99,4 @@ journalctl -u n8n-pruner
 
 ## Disclaimer
 
-**USE AT YOUR OWN RISK.** This script performs `DELETE` and `VACUUM FULL` operations on your database. While designed to be surgical, always ensure you have a fresh backup (via `backup_n8n.sh`) before running maintenance for the first time or after major n8n updates.
+**USE AT YOUR OWN RISK.** This script performs `DELETE` and `VACUUM FULL` operations on your database, and permanently removes files from the n8n container's `binaryData` directory. While designed to be surgical, always ensure you have a fresh backup (via `backup_n8n.sh`) before running maintenance for the first time or after major n8n updates.

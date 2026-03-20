@@ -20,6 +20,5 @@ WHERE id IN (
         WHERE w."updatedAt" < NOW() - p.age
     ) ranked
     WHERE ranked.rank > (SELECT keep_count FROM params)
-);
-
-VACUUM execution_data;
+)
+RETURNING id, "workflowId";
