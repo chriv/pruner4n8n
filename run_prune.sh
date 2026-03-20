@@ -66,9 +66,25 @@ echo "Step 4: Cleaning up empty binaryData directories..."
 docker exec "$N8N_CONTAINER" find "$BINARY_DATA_PATH" -mindepth 1 -type d -empty -delete 2>/dev/null
 echo "  Done."
 
-# --- Step 5: Reclaim disk space ---
-echo "Step 5: Reclaiming disk space (VACUUM FULL)..."
+# --- Step 5: Clean up orphaned DB binary data (database storage mode) ---
+# The binary_data table has no FK to execution_entity, so rows are not auto-deleted.
+# This is a no-op when using filesystem storage mode (the common case).
+echo "Step 5: Cleaning up orphaned DB binary data rows..."
+DB_BINARY_COUNT=$(docker exec -i "$DB_CONTAINER" psql -U n8n -t -A -c "
+WITH deleted AS (
+    DELETE FROM binary_data
+    WHERE \"sourceType\" = 'execution'
+      AND \"sourceId\" NOT IN (SELECT id::text FROM execution_entity)
+    RETURNING 1
+)
+SELECT count(*) FROM deleted;
+")
+echo "  Removed $DB_BINARY_COUNT orphaned binary_data rows."
+
+# --- Step 6: Reclaim disk space ---
+echo "Step 6: Reclaiming disk space (VACUUM FULL)..."
 docker exec -i "$DB_CONTAINER" psql -U n8n -c "VACUUM FULL execution_entity;"
 docker exec -i "$DB_CONTAINER" psql -U n8n -c "VACUUM FULL execution_data;"
+docker exec -i "$DB_CONTAINER" psql -U n8n -c "VACUUM FULL binary_data;"
 
 echo "Maintenance complete: $(date)"
